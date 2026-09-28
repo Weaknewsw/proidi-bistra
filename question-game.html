@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дашь мне?</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f5f2;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* мягкие пятна на фоне */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .blob-1 { width: 420px; height: 420px; background: #dce9ff; top: -120px; right: -80px; }
+  .blob-2 { width: 380px; height: 380px; background: #ffe3d6; bottom: -100px; left: -60px; }
+
+  .card {
+    position: relative;
+    z-index: 2;
+    background: #ffffff;
+    border: 1px solid #eee9e2;
+    border-radius: 20px;
+    padding: 46px 48px 50px;
+    text-align: center;
+    max-width: 440px;
+    width: 92%;
+    box-shadow: 0 24px 50px rgba(90, 70, 50, 0.08);
+    animation: rise 0.5s ease-out;
+  }
+  @keyframes rise {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  /* котик */
+  .cat { width: 130px; margin-bottom: 8px; animation: catBob 3s ease-in-out infinite; }
+  @keyframes catBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-7px); }
+  }
+  .cat .tail { transform-origin: 148px 108px; animation: tailWag 2s ease-in-out infinite; }
+  @keyframes tailWag {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(12deg); }
+  }
+
+  h1 {
+    font-size: clamp(26px, 6vw, 36px);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 6px 0 30px;
+    color: #3d3a37;
+  }
+
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 14px 40px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s, background 0.15s;
+  }
+
+  #btnYes {
+    background: #3d3a37;
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(61, 58, 55, 0.25);
+  }
+  #btnYes:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(61, 58, 55, 0.3); }
+
+  #btnNo {
+    background: transparent;
+    color: #9a948c;
+    border: 1.5px solid #e5ded5;
+  }
+  #btnNo:hover { border-color: #c9c0b4; }
+
+  /* модалка */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(60, 55, 50, 0.35);
+    backdrop-filter: blur(3px);
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: #ffffff;
+    border: 1px solid #eee9e2;
+    border-radius: 18px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 24px 50px rgba(90, 70, 50, 0.15);
+    animation: rise 0.35s ease-out;
+  }
+
+  .modal h2 { font-size: 22px; margin-bottom: 4px; color: #3d3a37; }
+  .modal p { color: #9a948c; font-size: 14px; margin-bottom: 22px; }
+
+  .field { margin-bottom: 14px; text-align: left; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #9a948c;
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid #e5ded5;
+    background: #faf8f5;
+    color: #3d3a37;
+    color-scheme: light;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: #3d3a37; }
+
+  #btnConfirm {
+    width: 100%;
+    margin-top: 8px;
+    background: #3d3a37;
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(61, 58, 55, 0.25);
+  }
+  #btnConfirm:hover { transform: translateY(-2px); }
+  #btnConfirm:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  /* финальный экран */
+  #winScreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #f7f5f2;
+    z-index: 30;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  #winScreen.show { display: flex; }
+  #winScreen .cat { width: 170px; }
+  #winScreen h1 { color: #3d3a37; margin: 6px 0 10px; }
+  #when { color: #b07a4f; font-size: 20px; font-weight: 600; margin-bottom: 10px; }
+  #winScreen .sub { color: #9a948c; font-size: 16px; }
+
+  .particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: fly linear forwards;
+  }
+  @keyframes fly {
+    to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="card" id="mainCard">
+  <svg class="cat" viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">
+    <path class="tail" d="M148 108 Q 185 100 182 62" stroke="#d99a5b" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <ellipse cx="105" cy="118" rx="52" ry="40" fill="#f2c391"/>
+    <path d="M62 52 L 52 18 L 84 38 Z" fill="#f2c391"/>
+    <path d="M138 52 L 148 18 L 116 38 Z" fill="#f2c391"/>
+    <path d="M66 46 L 60 26 L 80 38 Z" fill="#e8a37e"/>
+    <path d="M134 46 L 140 26 L 120 38 Z" fill="#e8a37e"/>
+    <circle cx="100" cy="66" r="46" fill="#f2c391"/>
+    <circle cx="84" cy="62" r="7" fill="#4a3328"/>
+    <circle cx="116" cy="62" r="7" fill="#4a3328"/>
+    <circle cx="86.5" cy="59.5" r="2.4" fill="#fff"/>
+    <circle cx="118.5" cy="59.5" r="2.4" fill="#fff"/>
+    <ellipse cx="70" cy="76" rx="8" ry="5" fill="#e8a37e" opacity="0.7"/>
+    <ellipse cx="130" cy="76" rx="8" ry="5" fill="#e8a37e" opacity="0.7"/>
+    <path d="M96 74 Q 100 71 104 74 Q 100 80 96 74 Z" fill="#d97f63"/>
+    <path d="M100 79 Q 94 86 88 81 M100 79 Q 106 86 112 81" stroke="#4a3328" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M64 70 L 44 66 M64 76 L 45 78 M136 70 L 156 66 M136 76 L 155 78" stroke="#d9a86b" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="82" cy="150" rx="14" ry="9" fill="#f2c391"/>
+    <ellipse cx="126" cy="150" rx="14" ry="9" fill="#f2c391"/>
+  </svg>
+
+  <h1>Дашь мне?</h1>
+  <div class="buttons">
+    <button id="btnYes">Да</button>
+    <button id="btnNo">Нет</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>Ура!</h2>
+    <p>Выбери дату и время</p>
+    <div class="field">
+      <label for="dateInput">Дата</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div class="field">
+      <label for="timeInput">Время</label>
+      <input type="time" id="timeInput">
+    </div>
+    <button id="btnConfirm" disabled>Подтвердить</button>
+  </div>
+</div>
+
+<div id="winScreen">
+  <svg class="cat" viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">
+    <path class="tail" d="M148 108 Q 185 100 182 62" stroke="#d99a5b" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <ellipse cx="105" cy="118" rx="52" ry="40" fill="#f2c391"/>
+    <path d="M62 52 L 52 18 L 84 38 Z" fill="#f2c391"/>
+    <path d="M138 52 L 148 18 L 116 38 Z" fill="#f2c391"/>
+    <path d="M66 46 L 60 26 L 80 38 Z" fill="#e8a37e"/>
+    <path d="M134 46 L 140 26 L 120 38 Z" fill="#e8a37e"/>
+    <circle cx="100" cy="66" r="46" fill="#f2c391"/>
+    <path d="M77 62 Q 84 54 91 62" stroke="#4a3328" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M109 62 Q 116 54 123 62" stroke="#4a3328" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="70" cy="76" rx="8" ry="5" fill="#e8a37e" opacity="0.8"/>
+    <ellipse cx="130" cy="76" rx="8" ry="5" fill="#e8a37e" opacity="0.8"/>
+    <path d="M96 74 Q 100 71 104 74 Q 100 80 96 74 Z" fill="#d97f63"/>
+    <path d="M100 79 Q 100 88 92 87 M100 79 Q 100 88 108 87" stroke="#4a3328" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M64 70 L 44 66 M64 76 L 45 78 M136 70 L 156 66 M136 76 L 155 78" stroke="#d9a86b" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="82" cy="150" rx="14" ry="9" fill="#f2c391"/>
+    <ellipse cx="126" cy="150" rx="14" ry="9" fill="#f2c391"/>
+  </svg>
+  <h1>Договорились!</h1>
+  <div id="when"></div>
+  <p class="sub">Жду тебя Катенька сучачка моя мва ></p>
+</div>
+
+<script>
+  var btnNo = document.getElementById('btnNo');
+  var btnYes = document.getElementById('btnYes');
+  var overlay = document.getElementById('modalOverlay');
+  var dateInput = document.getElementById('dateInput');
+  var timeInput = document.getElementById('timeInput');
+  var btnConfirm = document.getElementById('btnConfirm');
+  var winScreen = document.getElementById('winScreen');
+  var when = document.getElementById('when');
+
+  dateInput.min = new Date().toISOString().split('T')[0];
+
+  var labels = ['Не знаю', 'Может быть…', 'Не уверена', 'Скорее да,чем нет', 'Ладно. Да'];
+  var i = 0;
+
+  btnNo.addEventListener('click', function () {
+    i++;
+    if (i < labels.length) {
+      btnNo.textContent = labels[i];
+      btnNo.style.opacity = Math.max(0.5, 1 - i * 0.12);
+      btnYes.style.transform = 'scale(' + (1 + i * 0.08) + ')';
+    } else {
+      btnNo.textContent = 'Да';
+      btnNo.style.cssText = 'background:#3d3a37;color:#fff;border:none;opacity:1;box-shadow:0 6px 18px rgba(61,58,55,0.25);';
+    }
+  });
+
+  function openModal() { overlay.classList.add('show'); }
+  btnYes.addEventListener('click', openModal);
+
+  function checkForm() {
+    btnConfirm.disabled = !(dateInput.value && timeInput.value);
+  }
+  dateInput.addEventListener('input', checkForm);
+  timeInput.addEventListener('input', checkForm);
+
+  btnConfirm.addEventListener('click', function () {
+    overlay.classList.remove('show');
+    var d = new Date(dateInput.value + 'T' + timeInput.value);
+    when.textContent = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + timeInput.value;
+    winScreen.classList.add('show');
+    celebrate();
+  });
+
+  function celebrate() {
+    var colors = ['#3d3a37', '#b07a4f', '#7fa3d9', '#d97f63', '#9ab884'];
+    var cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    for (var k = 0; k < 70; k++) {
+      (function (k) {
+        setTimeout(function () {
+          var p = document.createElement('div');
+          p.className = 'particle';
+          p.style.background = colors[Math.floor(Math.random() * colors.length)];
+          p.style.left = cx + 'px';
+          p.style.top = cy + 'px';
+          var angle = Math.random() * Math.PI * 2;
+          var dist = 130 + Math.random() * 320;
+          p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+          p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+          p.style.animationDuration = (0.8 + Math.random() * 0.9) + 's';
+          winScreen.appendChild(p);
+          setTimeout(function () { p.remove(); }, 2000);
+        }, k * 14);
+      })(k);
+    }
+  }
+</script>
+
+</body>
+</html>
